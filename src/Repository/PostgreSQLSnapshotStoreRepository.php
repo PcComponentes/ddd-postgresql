@@ -20,7 +20,7 @@ class PostgreSQLSnapshotStoreRepository extends PostgreSQLBaseAggregateRepositor
 
     public function add(Snapshot $snapshot): void
     {
-        $this->insertStatement($snapshot, self::TABLE)->execute();
+        $this->forceInsertStatement($snapshot, self::TABLE)->execute();
     }
 
     public function get(Uuid $aggregateId): ?Snapshot
