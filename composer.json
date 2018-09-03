@@ -1,0 +1,21 @@
+{
+    "name": "pccomponentes/ddd-postgresql",
+    "description": "PostgreSql repository implementations",
+    "authors": [
+        {
+            "name": "Juan G. Rodríguez Carrión",
+            "email": "juan.rodriguez@pccomponentes.com"
+        }
+    ],
+    "license": "MIT",
+    "type": "library",
+    "autoload": {
+        "psr-4": {
+            "Pccomponentes\\DddPostgreSql\\": "src/"
+        }
+    },
+    "require": {
+        "php": "^7.2",
+        "pccomponentes/ddd": "~0.2"
+    }
+}
