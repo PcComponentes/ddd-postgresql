@@ -6,58 +6,82 @@ namespace Pccomponentes\DddPostgreSql\Repository;
 use Pccomponentes\Ddd\Domain\Model\ValueObject\DateTimeValueObject;
 use Pccomponentes\Ddd\Domain\Model\ValueObject\Uuid;
 use Pccomponentes\Ddd\Util\Message\AggregateMessage;
+use Pccomponentes\Ddd\Util\Message\Serialization\AggregateMessageUnserializable;
 
-class PostgreSQLBaseAggregateRepository
+abstract class PostgreSQLBaseAggregateRepository
 {
     private $connection;
+    private $unserializer;
 
-    public function __construct(\PDO $connection)
+    final public function __construct(\PDO $connection, AggregateMessageUnserializable $unserializer)
     {
         $this->connection = $connection;
+        $this->unserializer = $unserializer;
     }
 
-    protected function connection(): \PDO
-    {
-        return $this->connection;
-    }
-
-    protected function getStatement(Uuid $aggregateId, string $tableName): \PDOStatement
+    protected function findByAggregateId(Uuid $aggregateId): array
     {
         $aggregateIdStr = $aggregateId->value();
         $stm = $this->connection->prepare(
             \sprintf(
                 'SELECT message_id, aggregate_id, name, version, payload, occurred_on FROM %s
                 WHERE aggregate_id = :aggregate_id ORDER BY occurred_on ASC',
-                $tableName
+                $this->table()
             )
         );
         $stm->bindParam(':aggregate_id', $aggregateIdStr);
+        $stm->execute();
 
-        return $stm;
+        $mapped = [];
+        while ($message = $stm->fetch(\PDO::FETCH_ASSOC)) {
+            $mapped[] = $this->unserializer->unserialize($message);
+        }
+
+        return $mapped;
+    }
+
+    protected function findOneByAggregateId(Uuid $aggregateId): ?AggregateMessage
+    {
+        $aggregateIdStr = $aggregateId->value();
+        $stm = $this->connection->prepare(
+            \sprintf(
+                'SELECT message_id, aggregate_id, name, version, payload, occurred_on FROM %s
+                WHERE aggregate_id = :aggregate_id ORDER BY occurred_on ASC',
+                $this->table()
+            )
+        );
+        $stm->bindParam(':aggregate_id', $aggregateIdStr);
+        $stm->execute();
+        $message = $stm->fetch(\PDO::FETCH_ASSOC);
+
+        return $message ? $this->unserializer->unserialize($message) : null;
     }
 
 
-    protected function getSinceStatement(
-        Uuid $aggregateId,
-        DateTimeValueObject $since,
-        string $tableName
-    ): \PDOStatement {
+    protected function findByAggregateIdSince(Uuid $aggregateId, DateTimeValueObject $since): array
+    {
         $aggregateIdStr = $aggregateId->value();
         $sinceStr = $since->format(\DATE_ATOM);
         $stm = $this->connection->prepare(
             \sprintf(
                 'SELECT message_id, aggregate_id, name, version, payload, occurred_on FROM %s
                  WHERE aggregate_id = :aggregate_id AND occurred_on > :occurred_on ORDER BY occurred_on ASC',
-                $tableName
+                $this->table()
             )
         );
         $stm->bindParam(':aggregate_id', $aggregateIdStr);
         $stm->bindParam(':occurred_on', $sinceStr);
+        $stm->execute();
 
-        return $stm;
+        $mapped = [];
+        while ($message = $stm->fetch(\PDO::FETCH_ASSOC)) {
+            $mapped[] = $this->unserializer->unserialize($message);
+        }
+
+        return $mapped;
     }
 
-    protected function insertStatement(AggregateMessage $message, string $tableName): \PDOStatement
+    protected function insert(AggregateMessage $message): void
     {
         $messageId = $message->messageId()->value();
         $aggregateId = $message->aggregateId()->value();
@@ -70,7 +94,7 @@ class PostgreSQLBaseAggregateRepository
             \sprintf(
                 'INSERT INTO %s (message_id, aggregate_id, name, version, payload, occurred_on)
                 VALUES (:message_id, :aggregate_id, :name, :version, :payload, :occurred_on)',
-              $tableName
+                $this->table()
             )
         );
         $stm->bindParam(':message_id', $messageId);
@@ -80,10 +104,10 @@ class PostgreSQLBaseAggregateRepository
         $stm->bindParam(':occurred_on', $occurredOn);
         $stm->bindParam(':version', $version);
 
-        return $stm;
+        $stm->execute();
     }
 
-    protected function forceInsertStatement(AggregateMessage $message, string $tableName): \PDOStatement
+    protected function forceInsert(AggregateMessage $message): void
     {
         $messageId = $message->messageId()->value();
         $aggregateId = $message->aggregateId()->value();
@@ -102,7 +126,7 @@ class PostgreSQLBaseAggregateRepository
                 version= :version,
                 payload = :payload,
                 occurred_on = :occurred_on;',
-                $tableName
+                $this->table()
             )
         );
         $stm->bindParam(':message_id', $messageId);
@@ -112,20 +136,22 @@ class PostgreSQLBaseAggregateRepository
         $stm->bindParam(':occurred_on', $occurredOn);
         $stm->bindParam(':version', $version);
 
-        return $stm;
+        $stm->execute();
     }
 
-    protected function removeStatement(Uuid $aggregateId, string $tableName): \PDOStatement
+    protected function delete(AggregateMessage $message): void
     {
-        $aggregateIdStr = $aggregateId->value();
+        $aggregateIdStr = $message->aggregateId()->value();
         $stm = $this->connection->prepare(
             \sprintf(
                 'DELETE FROM %s WHERE aggregate_id = :aggregate_id',
-                $tableName
+                $this->table()
             )
         );
         $stm->bindParam(':aggregate_id', $aggregateIdStr);
 
-        return $stm;
+        $stm->execute();
     }
+
+    abstract protected function table(): string;
 }

@@ -5,35 +5,26 @@ namespace Pccomponentes\DddPostgreSql\Repository;
 use Pccomponentes\Ddd\Domain\Model\Snapshot;
 use Pccomponentes\Ddd\Domain\Model\ValueObject\Uuid;
 use Pccomponentes\Ddd\Infrastructure\Repository\SnapshotStoreRepository;
-use Pccomponentes\Ddd\Util\Serializer\SnapshotUnserializable;
 
 class PostgreSQLSnapshotStoreRepository extends PostgreSQLBaseAggregateRepository implements SnapshotStoreRepository
 {
-    private const TABLE = 'snapshot_store';
-    private $unserializer;
-
-    final public function __construct(\PDO $connection, SnapshotUnserializable $unserializer)
+    protected function table(): string
     {
-        parent::__construct($connection);
-        $this->unserializer = $unserializer;
+        return PostgreSQLSchemaCreation::SNAPSHOT_STORE;
     }
 
     public function add(Snapshot $snapshot): void
     {
-        $this->forceInsertStatement($snapshot, self::TABLE)->execute();
+        $this->insert($snapshot);
     }
 
     public function get(Uuid $aggregateId): ?Snapshot
     {
-        $stm = $this->getStatement($aggregateId,self::TABLE);
-        $stm->execute();
-        $snapshot = $stm->fetch(\PDO::FETCH_ASSOC);
-
-        return $snapshot ? $this->unserializer->unserialize($snapshot) : null;
+        return $this->findOneByAggregateId($aggregateId);
     }
 
     public function remove(Snapshot $snapshot): void
     {
-        $this->removeStatement($snapshot->aggregateId(), self::TABLE)->execute();
+        $this->delete($snapshot);
     }
 }

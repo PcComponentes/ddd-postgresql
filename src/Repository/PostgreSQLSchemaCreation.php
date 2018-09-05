@@ -4,8 +4,8 @@ namespace Pccomponentes\DddPostgreSql\Repository;
 
 class PostgreSQLSchemaCreation
 {
-    private const EVENT_STORE = 'event_store';
-    private const SNAPSHOT_STORE = 'snapshot_store';
+    public const EVENT_STORE = 'event_store';
+    public const SNAPSHOT_STORE = 'snapshot_store';
 
     public static function createEventStore(): string
     {
@@ -43,26 +43,6 @@ class PostgreSQLSchemaCreation
     public static function dropSnapshotStore(): string
     {
         return self::dropTable(self::SNAPSHOT_STORE);
-    }
-
-    public static function createProjection(string $tableName): string
-    {
-        return \implode(
-            ';',
-            [
-                self::createTable($tableName),
-                self::createIndex($tableName, 'message_id'),
-                self::createIndex($tableName, 'name'),
-                self::createIndex($tableName, 'aggregate_id'),
-                self::createUnique($tableName, 'message_id'),
-                self::createUnique($tableName, 'aggregate_id')
-            ]
-        );
-    }
-
-    public static function dropProjection(string $tableName): string
-    {
-        return self::dropTable($tableName);
     }
 
     private static function createTable(string $table): string
