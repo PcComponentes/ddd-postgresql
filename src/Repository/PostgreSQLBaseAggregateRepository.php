@@ -6,14 +6,13 @@ namespace Pccomponentes\DddPostgreSql\Repository;
 use Pccomponentes\Ddd\Domain\Model\ValueObject\DateTimeValueObject;
 use Pccomponentes\Ddd\Domain\Model\ValueObject\Uuid;
 use Pccomponentes\Ddd\Util\Message\AggregateMessage;
-use Pccomponentes\Ddd\Util\Message\Serialization\AggregateMessageUnserializable;
 
 abstract class PostgreSQLBaseAggregateRepository
 {
     private $connection;
     private $unserializer;
 
-    final public function __construct(\PDO $connection, AggregateMessageUnserializable $unserializer)
+    final public function __construct(\PDO $connection, MessageUnserializer $unserializer)
     {
         $this->connection = $connection;
         $this->unserializer = $unserializer;
@@ -34,6 +33,7 @@ abstract class PostgreSQLBaseAggregateRepository
 
         $mapped = [];
         while ($message = $stm->fetch(\PDO::FETCH_ASSOC)) {
+            $message['payload'] = \json_decode($message['payload'], true);
             $mapped[] = $this->unserializer->unserialize($message);
         }
 
@@ -54,7 +54,12 @@ abstract class PostgreSQLBaseAggregateRepository
         $stm->execute();
         $message = $stm->fetch(\PDO::FETCH_ASSOC);
 
-        return $message ? $this->unserializer->unserialize($message) : null;
+        if ($message) {
+            $message['payload'] = \json_decode($message['payload'], true);
+            return $this->unserializer->unserialize($message);
+        }
+
+        return null;
     }
 
 
@@ -75,6 +80,7 @@ abstract class PostgreSQLBaseAggregateRepository
 
         $mapped = [];
         while ($message = $stm->fetch(\PDO::FETCH_ASSOC)) {
+            $message['payload'] = \json_decode($message['payload'], true);
             $mapped[] = $this->unserializer->unserialize($message);
         }
 
