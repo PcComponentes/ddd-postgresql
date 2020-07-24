@@ -206,7 +206,7 @@ abstract class PostgresBaseAggregateRepository
         return $result['count'];
     }
 
-    protected function queryByAggregateIdPaginated(Uuid $aggregateId, int $page, int $pageSize): array
+    protected function queryByAggregateIdPaginated(Uuid $aggregateId, int $offset, int $limit): array
     {
         $stmt = $this->connection->prepare(
             \sprintf(
@@ -214,15 +214,15 @@ abstract class PostgresBaseAggregateRepository
                 from %s
                 where aggregate_id = :aggregateId
                 ORDER BY occurred_on DESC, aggregate_version ASC
-                LIMIT :pageSize
+                LIMIT :limit
                 OFFSET :offset',
                 $this->tableName(),
             ),
         );
 
         $stmt->bindValue('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
-        $stmt->bindValue('pageSize', $pageSize, \PDO::PARAM_INT);
-        $stmt->bindValue('offset', $pageSize * $page, \PDO::PARAM_INT);
+        $stmt->bindValue('limit', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue('offset', $offset, \PDO::PARAM_INT);
         $this->execute($stmt);
 
         $events = $stmt->fetchAll();
@@ -236,8 +236,8 @@ abstract class PostgresBaseAggregateRepository
 
     protected function queryGivenEventsByAggregateIdPaginated(
         Uuid $aggregateId,
-        int $page,
-        int $pageSize,
+        int $offset,
+        int $limit,
         string ...$eventNames
     ): array {
         $stmt = $this->connection
@@ -248,8 +248,8 @@ abstract class PostgresBaseAggregateRepository
             ->andWhere('a.message_name IN (:eventNames)')
             ->setParameter('aggregateId', $aggregateId->value(), \PDO::PARAM_STR)
             ->setParameter('eventNames', $eventNames, Connection::PARAM_STR_ARRAY)
-            ->setFirstResult($page * $pageSize)
-            ->setMaxResults($pageSize)
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
             ->orderBy('a.occurred_on', 'DESC')
             ->addOrderBy('a.aggregate_version', 'ASC')
             ->execute();

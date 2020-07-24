@@ -21,14 +21,14 @@ final class PostgresEventStoreRepository extends PostgresBaseAggregateRepository
         return $this->findByAggregateId($aggregateId);
     }
 
-    public function getPaginated(Uuid $aggregateId, int $page, int $pageSize): array
+    public function getPaginated(Uuid $aggregateId, int $offset, int $limit): array
     {
-        return $this->queryByAggregateIdPaginated($aggregateId, $page, $pageSize);
+        return $this->queryByAggregateIdPaginated($aggregateId, $offset, $limit);
     }
 
-    public function getGivenEventsByAggregate(Uuid $aggregateId, int $page, int $pageSize, string ...$events): array
+    public function getGivenEventsByAggregate(Uuid $aggregateId, int $offset, int $limit, string ...$events): array
     {
-        return $this->queryGivenEventsByAggregateIdPaginated($aggregateId, $page, $pageSize, ...$events);
+        return $this->queryGivenEventsByAggregateIdPaginated($aggregateId, $offset, $limit, ...$events);
     }
 
     public function getSince(Uuid $aggregateId, DateTimeValueObject $since): array
@@ -71,19 +71,17 @@ final class PostgresEventStoreRepository extends PostgresBaseAggregateRepository
         return $this->countByAggregateIdSinceVersion($aggregateId, $aggregateVersion);
     }
 
-    public function getAll(int $page, int $pageSize): array
+    public function getAll(int $offset, int $limit): array
     {
-        $offset = $page * $pageSize;
-
         $stmt = $this->connection->prepare(
             \sprintf(
                 'select message_id, aggregate_id, aggregate_version, occurred_on, message_name, payload
                 from %s
-                LIMIT :pageSize OFFSET :offset',
+                LIMIT :limit OFFSET :offset',
                 $this->tableName(),
             ),
         );
-        $stmt->bindValue('pageSize', $pageSize, \PDO::PARAM_INT);
+        $stmt->bindValue('limit', $limit, \PDO::PARAM_INT);
         $stmt->bindValue('offset', $offset, \PDO::PARAM_INT);
         $this->execute($stmt);
 
