@@ -3,19 +3,25 @@
     "description": "PostgreSql repository implementations",
     "authors": [
         {
-            "name": "Juan G. Rodríguez Carrión",
-            "email": "juan.rodriguez@pccomponentes.com"
+            "name": "Aarón Bernabeu",
+            "email": "aaron.bernabeu@pccomponentes.com"
         }
     ],
     "license": "MIT",
     "type": "library",
     "autoload": {
         "psr-4": {
-            "Pccomponentes\\DddPostgreSql\\": "src/"
+            "PcComponentes\\DddPostgreSQL\\": "src/"
         }
     },
     "require": {
-        "php": "^7.2",
-        "pccomponentes/ddd": "~0.2"
+        "ext-pdo": "*",
+        "ext-json": "*",
+        "php": "^7.4",
+        "pccomponentes/ddd": "^2.0",
+        "doctrine/dbal": "^2.10"
+    },
+    "require-dev": {
+        "pccomponentes/coding-standard": "^1.1"
     }
 }
