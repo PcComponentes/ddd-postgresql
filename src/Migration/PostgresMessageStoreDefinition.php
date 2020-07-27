@@ -1,4 +1,5 @@
-<?php declare(strict_types=1);
+<?php
+declare(strict_types=1);
 
 namespace PcComponentes\DddPostgreSQL\Migration;
 
@@ -9,7 +10,8 @@ final class PostgresMessageStoreDefinition
 
     public static function eventStoreUpSchema(): string
     {
-        return sprintf('
+        return \sprintf(
+            '
             CREATE TABLE %s (
                 message_id UUID NOT NULL,
                 aggregate_id UUID NOT NULL,
@@ -21,14 +23,15 @@ final class PostgresMessageStoreDefinition
             );
             CREATE INDEX "event_store_message_name" ON "event_store" ("message_name");
             CREATE INDEX "event_store_aggregate_id" ON "event_store" ("aggregate_id");
-        ',
-            self::EVENT_STORE
+            ',
+            self::EVENT_STORE,
         );
     }
 
     public static function snapshotStoreUpSchema(): string
     {
-        return \sprintf('
+        return \sprintf(
+            '
             CREATE TABLE %s (
                 message_id UUID NOT NULL,
                 aggregate_id UUID NOT NULL,
@@ -42,7 +45,7 @@ final class PostgresMessageStoreDefinition
             CREATE INDEX "snapshot_store_aggregate_id" ON "snapshot_store" ("aggregate_id");
             ALTER TABLE snapshot_store ADD CONSTRAINT "snapshot_store_unique_aggregate_id" UNIQUE ("aggregate_id");
         ',
-        self::EVENT_STORE
+            self::EVENT_STORE,
         );
     }
 

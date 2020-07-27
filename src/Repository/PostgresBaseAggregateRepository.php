@@ -1,4 +1,5 @@
-<?php declare(strict_types=1);
+<?php
+declare(strict_types=1);
 
 namespace PcComponentes\DddPostgreSQL\Repository;
 
@@ -15,13 +16,13 @@ abstract class PostgresBaseAggregateRepository
     protected Connection $connection;
     protected AggregateMessageStreamDeserializer $deserializer;
 
-    abstract protected function tableName(): string;
-
     final public function __construct(Connection $connection, AggregateMessageStreamDeserializer $deserializer)
     {
         $this->connection = $connection;
         $this->deserializer = $deserializer;
     }
+
+    abstract protected function tableName(): string;
 
     protected function insert(AggregateMessage $message): void
     {
@@ -267,16 +268,18 @@ abstract class PostgresBaseAggregateRepository
     {
         $result = $stmt->execute();
 
-        if (false === $result) {
-            $errorInfo = \json_encode($stmt->errorInfo(), \JSON_ERROR_NONE);
-            $errorCode = (string)$stmt->errorCode();
-
-            if (false === \is_string($errorInfo)) {
-                $errorInfo = '';
-            }
-
-            throw new \RuntimeException(\sprintf('%s | %s', $errorInfo, $errorCode));
+        if (false !== $result) {
+            return;
         }
+
+        $errorInfo = \json_encode($stmt->errorInfo(), \JSON_ERROR_NONE);
+        $errorCode = (string)$stmt->errorCode();
+
+        if (false === \is_string($errorInfo)) {
+            $errorInfo = '';
+        }
+
+        throw new \RuntimeException(\sprintf('%s | %s', $errorInfo, $errorCode));
     }
 
     private function bindAggregateMessageValues(AggregateMessage $message, Statement $stmt): void
