@@ -45,7 +45,7 @@ final class PostgresMessageStoreDefinition
             CREATE INDEX "snapshot_store_aggregate_id" ON "snapshot_store" ("aggregate_id");
             ALTER TABLE snapshot_store ADD CONSTRAINT "snapshot_store_unique_aggregate_id" UNIQUE ("aggregate_id");
         ',
-            self::EVENT_STORE,
+            self::SNAPSHOT_STORE,
         );
     }
 
