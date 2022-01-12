@@ -11,6 +11,10 @@ interface EventStoreRepository extends DddEventStoreRepository
 {
     public function countEventsFor(Uuid $aggregateId): int;
 
+    public function countGivenEventsByAggregate(Uuid $aggregateId, string ...$events): int;
+
+    public function countEventsFilteredByAggregate(Uuid $aggregateId, string ...$events): int;
+
     public function countEventsForSince(Uuid $aggregateId, DateTimeValueObject $since): int;
 
     public function getGivenEventsByAggregate(Uuid $aggregateId, int $offset, int $limit, string ...$events): array;

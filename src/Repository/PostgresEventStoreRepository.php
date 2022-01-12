@@ -67,6 +67,16 @@ final class PostgresEventStoreRepository extends PostgresBaseAggregateRepository
         return $this->countByAggregateId($aggregateId);
     }
 
+    public function countGivenEventsByAggregate(Uuid $aggregateId, string ...$events): int
+    {
+        return $this->countGivenEventsByAggregateId( $aggregateId, ...$events);
+    }
+
+    public function countEventsFilteredByAggregate(Uuid $aggregateId, string ...$events): int
+    {
+        return $this->countFilteredEventsByAggregateId($aggregateId, ...$events);
+    }
+
     public function countEventsForSince(Uuid $aggregateId, DateTimeValueObject $since): int
     {
         return $this->countByAggregateIdSince($aggregateId, $since);

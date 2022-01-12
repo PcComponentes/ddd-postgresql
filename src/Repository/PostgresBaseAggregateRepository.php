@@ -169,6 +169,35 @@ abstract class PostgresBaseAggregateRepository
         return $result['count'];
     }
 
+    protected function countGivenEventsByAggregateId(Uuid $aggregateId, string ...$eventNames): int
+    {
+        $stmt = $this->connection
+            ->createQueryBuilder()
+            ->select('count(message_id) as count')
+            ->from($this->tableName())
+            ->where('message_name IN (:eventNames)');
+
+        $stmt->setParameter('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
+        $stmt->setParameter('eventNames', $eventNames, Connection::PARAM_STR_ARRAY);
+
+        return $stmt->execute()->fetchOne();
+    }
+
+    protected function countFilteredEventsByAggregateId(Uuid $aggregateId, string ...$eventNames): int
+    {
+        $stmt = $this->connection
+            ->createQueryBuilder()
+            ->select('count(message_id) as count')
+            ->from($this->tableName())
+            ->where('message_name NOT IN (:eventNames)');
+
+        $stmt->setParameter('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
+        $stmt->setParameter('eventNames', $eventNames, Connection::PARAM_STR_ARRAY);
+
+        return $stmt->execute()->fetchOne();
+    }
+
+
     protected function countByAggregateIdSince(Uuid $aggregateId, DateTimeValueObject $since): int
     {
         $stmt = $this->connection->prepare(
