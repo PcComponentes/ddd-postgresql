@@ -175,7 +175,8 @@ abstract class PostgresBaseAggregateRepository
             ->createQueryBuilder()
             ->select('count(message_id) as count')
             ->from($this->tableName())
-            ->where('message_name IN (:eventNames)');
+            ->where('aggregate_id = :aggregateId')
+            ->andWhere('message_name IN (:eventNames)');
 
         $stmt->setParameter('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
         $stmt->setParameter('eventNames', $eventNames, Connection::PARAM_STR_ARRAY);
@@ -189,7 +190,8 @@ abstract class PostgresBaseAggregateRepository
             ->createQueryBuilder()
             ->select('count(message_id) as count')
             ->from($this->tableName())
-            ->where('message_name NOT IN (:eventNames)');
+            ->where('aggregate_id = :aggregateId')
+            ->andWhere('message_name NOT IN (:eventNames)');
 
         $stmt->setParameter('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
         $stmt->setParameter('eventNames', $eventNames, Connection::PARAM_STR_ARRAY);
