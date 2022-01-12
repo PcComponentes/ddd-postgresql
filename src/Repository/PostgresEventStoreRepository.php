@@ -32,6 +32,11 @@ final class PostgresEventStoreRepository extends PostgresBaseAggregateRepository
         return $this->queryGivenEventsByAggregateIdPaginated($aggregateId, $offset, $limit, ...$events);
     }
 
+    public function getEventsFilteredByAggregate(Uuid $aggregateId, int $offset, int $limit, string ...$events): array
+    {
+        return $this->queryEventsFilteredByAggregateIdPaginated($aggregateId, $offset, $limit, ...$events);
+    }
+
     public function getSince(Uuid $aggregateId, DateTimeValueObject $since): array
     {
         return $this->findByAggregateIdSince($aggregateId, $since);

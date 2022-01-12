@@ -264,6 +264,35 @@ abstract class PostgresBaseAggregateRepository
         return $events;
     }
 
+    protected function queryEventsFilteredByAggregateIdPaginated(
+        Uuid $aggregateId,
+        int $offset,
+        int $limit,
+        string ...$eventNames
+    ): array {
+        $stmt = $this->connection
+            ->createQueryBuilder()
+            ->addSelect('a.message_id, a.aggregate_id, a.aggregate_version, a.occurred_on, a.message_name, a.payload')
+            ->from($this->tableName(), 'a')
+            ->where('a.aggregate_id = :aggregateId')
+            ->andWhere('a.message_name NOT IN (:eventNames)')
+            ->setParameter('aggregateId', $aggregateId->value(), \PDO::PARAM_STR)
+            ->setParameter('eventNames', $eventNames, Connection::PARAM_STR_ARRAY)
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->orderBy('a.occurred_on', 'DESC')
+            ->addOrderBy('a.aggregate_version', 'ASC')
+            ->execute();
+
+        $events = $stmt->fetchAll();
+
+        foreach ($events as $key => $event) {
+            $events[$key]['payload'] = \json_decode($event['payload'], true);
+        }
+
+        return $events;
+    }
+
     protected function execute(Statement $stmt): void
     {
         $result = $stmt->execute();
