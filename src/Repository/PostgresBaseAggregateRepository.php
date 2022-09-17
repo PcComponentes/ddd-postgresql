@@ -15,11 +15,16 @@ abstract class PostgresBaseAggregateRepository
 {
     protected Connection $connection;
     protected AggregateMessageStreamDeserializer $deserializer;
+    private string $occurredOnUnit;
 
-    final public function __construct(Connection $connection, AggregateMessageStreamDeserializer $deserializer)
-    {
+    final public function __construct(
+        Connection $connection,
+        AggregateMessageStreamDeserializer $deserializer,
+        string $occurredOnUnit = 'seconds'
+    ) {
         $this->connection = $connection;
         $this->deserializer = $deserializer;
+        $this->occurredOnUnit = $occurredOnUnit;
     }
 
     abstract protected function tableName(): string;
@@ -74,7 +79,7 @@ abstract class PostgresBaseAggregateRepository
             ),
         );
         $value = $aggregateId->value();
-        $timestamp = $since->getTimestamp();
+        $timestamp = $this->mapTimestamp($since);
         $stmt->bindParam(':aggregate_id', $value);
         $stmt->bindParam(':occurred_on', $timestamp);
         $this->execute($stmt);
@@ -199,7 +204,6 @@ abstract class PostgresBaseAggregateRepository
         return $stmt->execute()->fetchOne();
     }
 
-
     protected function countByAggregateIdSince(Uuid $aggregateId, DateTimeValueObject $since): int
     {
         $stmt = $this->connection->prepare(
@@ -211,7 +215,7 @@ abstract class PostgresBaseAggregateRepository
             ),
         );
         $stmt->bindValue('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
-        $stmt->bindValue('occurred_on', $since->getTimestamp(), \PDO::PARAM_STR);
+        $stmt->bindValue('occurred_on', $this->mapTimestamp($since), \PDO::PARAM_STR);
         $this->execute($stmt);
 
         $result = $stmt->fetch();
@@ -347,7 +351,7 @@ abstract class PostgresBaseAggregateRepository
         $stmt->bindValue('message_id', $message->messageId()->value(), \PDO::PARAM_STR);
         $stmt->bindValue('aggregate_id', $message->aggregateId()->value(), \PDO::PARAM_STR);
         $stmt->bindValue('aggregate_version', $message->aggregateVersion(), \PDO::PARAM_INT);
-        $stmt->bindValue('occurred_on', $message->occurredOn()->getTimestamp(), \PDO::PARAM_INT);
+        $stmt->bindValue('occurred_on', $this->mapTimestamp($message->occurredOn()), \PDO::PARAM_INT);
         $stmt->bindValue('message_name', $message::messageName(), \PDO::PARAM_STR);
         $stmt->bindValue(
             'payload',
@@ -399,5 +403,18 @@ abstract class PostgresBaseAggregateRepository
         $this->execute($stmt);
 
         return $stmt;
+    }
+
+    private function mapTimestamp(\DateTimeInterface $occurredOn): int
+    {
+        if ('milliseconds' === $this->occurredOnUnit) {
+            return (int) $occurredOn->format('Uv');
+        }
+
+        if ('microseconds' === $this->occurredOnUnit) {
+            return (int) $occurredOn->format('Uu');
+        }
+
+        return (int) $occurredOn->getTimestamp();
     }
 }
