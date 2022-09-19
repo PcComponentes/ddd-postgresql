@@ -351,7 +351,7 @@ abstract class PostgresBaseAggregateRepository
         $stmt->bindValue('message_id', $message->messageId()->value(), \PDO::PARAM_STR);
         $stmt->bindValue('aggregate_id', $message->aggregateId()->value(), \PDO::PARAM_STR);
         $stmt->bindValue('aggregate_version', $message->aggregateVersion(), \PDO::PARAM_INT);
-        $stmt->bindValue('occurred_on', $this->mapDatetime($message->occurredOn()), \PDO::PARAM_INT);
+        $stmt->bindValue('occurred_on', $this->mapDatetime($message->occurredOn()), \PDO::PARAM_STR);
         $stmt->bindValue('message_name', $message::messageName(), \PDO::PARAM_STR);
         $stmt->bindValue(
             'payload',
@@ -405,19 +405,8 @@ abstract class PostgresBaseAggregateRepository
         return $stmt;
     }
 
-    private function mapDateTime(\DateTimeInterface $occurredOn)
+    private function mapDateTime(\DateTimeInterface $occurredOn): string
     {
-        $occurredOnValue = $occurredOn->format($this->occurredOnFormat);
-
-        if ($this->isIntegerish($occurredOnValue)) {
-            return (int) $occurredOnValue;
-        }
-
-        return (float) $occurredOnValue;
-    }
-
-    private function isIntegerish(string $occurredOnValue): bool
-    {
-        return (string) (int) $occurredOnValue === $occurredOnValue;
+        return $occurredOn->format($this->occurredOnFormat);
     }
 }
