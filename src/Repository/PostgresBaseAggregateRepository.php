@@ -79,7 +79,7 @@ abstract class PostgresBaseAggregateRepository
             ),
         );
         $value = $aggregateId->value();
-        $timestamp = $this->mapTimestamp($since);
+        $timestamp = $this->mapDatetime($since);
         $stmt->bindParam(':aggregate_id', $value);
         $stmt->bindParam(':occurred_on', $timestamp);
         $this->execute($stmt);
@@ -215,7 +215,7 @@ abstract class PostgresBaseAggregateRepository
             ),
         );
         $stmt->bindValue('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
-        $stmt->bindValue('occurred_on', $this->mapTimestamp($since), \PDO::PARAM_STR);
+        $stmt->bindValue('occurred_on', $this->mapDatetime($since), \PDO::PARAM_STR);
         $this->execute($stmt);
 
         $result = $stmt->fetch();
@@ -351,7 +351,7 @@ abstract class PostgresBaseAggregateRepository
         $stmt->bindValue('message_id', $message->messageId()->value(), \PDO::PARAM_STR);
         $stmt->bindValue('aggregate_id', $message->aggregateId()->value(), \PDO::PARAM_STR);
         $stmt->bindValue('aggregate_version', $message->aggregateVersion(), \PDO::PARAM_INT);
-        $stmt->bindValue('occurred_on', $this->mapTimestamp($message->occurredOn()), \PDO::PARAM_INT);
+        $stmt->bindValue('occurred_on', $this->mapDatetime($message->occurredOn()), \PDO::PARAM_INT);
         $stmt->bindValue('message_name', $message::messageName(), \PDO::PARAM_STR);
         $stmt->bindValue(
             'payload',
@@ -405,8 +405,15 @@ abstract class PostgresBaseAggregateRepository
         return $stmt;
     }
 
-    private function mapTimestamp(\DateTimeInterface $occurredOn): int
+
+    private function mapDateTime(\DateTimeInterface $occurredOn)
     {
-        return (int) $occurredOn->format($this->occurredOnFormat);
+        $occurredOnValue = $occurredOn->format($this->occurredOnFormat);
+
+        if ((string) (int) $occurredOnValue === $occurredOnValue) {
+            return (int) $occurredOn->format($this->occurredOnFormat);
+        }
+
+        return $occurredOn->format($this->occurredOnFormat);
     }
 }
