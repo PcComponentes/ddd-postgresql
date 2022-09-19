@@ -365,7 +365,7 @@ abstract class PostgresBaseAggregateRepository
         return new AggregateMessageStream(
             $event['message_id'],
             $event['aggregate_id'],
-            (int) $event['occurred_on'],
+            (float) $event['occurred_on'],
             $event['message_name'],
             (int) $event['aggregate_version'],
             $event['payload'],
@@ -410,10 +410,15 @@ abstract class PostgresBaseAggregateRepository
     {
         $occurredOnValue = $occurredOn->format($this->occurredOnFormat);
 
-        if ((string) (int) $occurredOnValue === $occurredOnValue) {
+        if ($this->isIntegerish($occurredOnValue)) {
             return (int) $occurredOnValue;
         }
 
-        return $occurredOnValue;
+        return (float) $occurredOnValue;
+    }
+
+    private function isIntegerish(string $occurredOnValue): bool
+    {
+        return (string) (int) $occurredOnValue === $occurredOnValue;
     }
 }
