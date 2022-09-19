@@ -405,7 +405,6 @@ abstract class PostgresBaseAggregateRepository
         return $stmt;
     }
 
-
     private function mapDateTime(\DateTimeInterface $occurredOn)
     {
         $occurredOnValue = $occurredOn->format($this->occurredOnFormat);
