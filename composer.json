@@ -17,8 +17,8 @@
     "require": {
         "ext-pdo": "*",
         "ext-json": "*",
-        "php": "^7.4 | ^8.0",
-        "pccomponentes/ddd": "^2.0 || 3.0 || 3.1",
+        "php": "^8.0",
+        "pccomponentes/ddd": "^3.2",
         "doctrine/dbal": "^2.10"
     },
     "require-dev": {
