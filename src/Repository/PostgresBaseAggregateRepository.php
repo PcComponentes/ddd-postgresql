@@ -15,16 +15,16 @@ abstract class PostgresBaseAggregateRepository
 {
     protected Connection $connection;
     protected AggregateMessageStreamDeserializer $deserializer;
-    private string $occurredOnUnit;
+    private string $occurredOnFormat;
 
     final public function __construct(
         Connection $connection,
         AggregateMessageStreamDeserializer $deserializer,
-        string $occurredOnUnit = 'seconds'
+        string $occurredOnFormat = 'U'
     ) {
         $this->connection = $connection;
         $this->deserializer = $deserializer;
-        $this->occurredOnUnit = $occurredOnUnit;
+        $this->occurredOnFormat = $occurredOnFormat;
     }
 
     abstract protected function tableName(): string;
@@ -337,7 +337,7 @@ abstract class PostgresBaseAggregateRepository
         }
 
         $errorInfo = \json_encode($stmt->errorInfo(), \JSON_ERROR_NONE);
-        $errorCode = (string)$stmt->errorCode();
+        $errorCode = (string) $stmt->errorCode();
 
         if (false === \is_string($errorInfo)) {
             $errorInfo = '';
@@ -365,9 +365,9 @@ abstract class PostgresBaseAggregateRepository
         return new AggregateMessageStream(
             $event['message_id'],
             $event['aggregate_id'],
-            (int)$event['occurred_on'],
+            (int) $event['occurred_on'],
             $event['message_name'],
-            (int)$event['aggregate_version'],
+            (int) $event['aggregate_version'],
             $event['payload'],
         );
     }
@@ -407,14 +407,6 @@ abstract class PostgresBaseAggregateRepository
 
     private function mapTimestamp(\DateTimeInterface $occurredOn): int
     {
-        if ('milliseconds' === $this->occurredOnUnit) {
-            return (int) $occurredOn->format('Uv');
-        }
-
-        if ('microseconds' === $this->occurredOnUnit) {
-            return (int) $occurredOn->format('Uu');
-        }
-
-        return (int) $occurredOn->getTimestamp();
+        return (int) $occurredOn->format($this->occurredOnFormat);
     }
 }
