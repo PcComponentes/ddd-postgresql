@@ -14,9 +14,9 @@ final class PostgresMessageStoreDefinition
             '
             CREATE TABLE %s (
                 message_id UUID NOT NULL,
-                aggregate_id UUID NOT NULL,
+                aggregate_id varchar(36) NOT NULL,
                 aggregate_version INT NOT NULL,
-                occurred_on BIGSERIAL NOT NULL,
+                occurred_on float NOT NULL,
                 message_name character varying(128) NOT NULL,
                 payload jsonb NOT NULL,
                 PRIMARY KEY(message_id)
@@ -34,9 +34,9 @@ final class PostgresMessageStoreDefinition
             '
             CREATE TABLE %s (
                 message_id UUID NOT NULL,
-                aggregate_id UUID NOT NULL,
+                aggregate_id varchar(36) NOT NULL,
                 aggregate_version INT NOT NULL,
-                occurred_on BIGSERIAL NOT NULL,
+                occurred_on float NOT NULL,
                 message_name character varying(128) NOT NULL,
                 payload jsonb NOT NULL,
                 PRIMARY KEY(message_id)
