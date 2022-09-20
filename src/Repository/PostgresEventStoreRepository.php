@@ -32,6 +32,11 @@ final class PostgresEventStoreRepository extends PostgresBaseAggregateRepository
         return $this->queryGivenEventsByAggregateIdPaginated($aggregateId, $offset, $limit, ...$events);
     }
 
+    public function getEventsFilteredByAggregate(Uuid $aggregateId, int $offset, int $limit, string ...$events): array
+    {
+        return $this->queryEventsFilteredByAggregateIdPaginated($aggregateId, $offset, $limit, ...$events);
+    }
+
     public function getSince(Uuid $aggregateId, DateTimeValueObject $since): array
     {
         return $this->findByAggregateIdSince($aggregateId, $since);
@@ -60,6 +65,16 @@ final class PostgresEventStoreRepository extends PostgresBaseAggregateRepository
     public function countEventsFor(Uuid $aggregateId): int
     {
         return $this->countByAggregateId($aggregateId);
+    }
+
+    public function countGivenEventsByAggregate(Uuid $aggregateId, string ...$events): int
+    {
+        return $this->countGivenEventsByAggregateId( $aggregateId, ...$events);
+    }
+
+    public function countEventsFilteredByAggregate(Uuid $aggregateId, string ...$events): int
+    {
+        return $this->countFilteredEventsByAggregateId($aggregateId, ...$events);
     }
 
     public function countEventsForSince(Uuid $aggregateId, DateTimeValueObject $since): int
