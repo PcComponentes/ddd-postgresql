@@ -3,7 +3,10 @@ declare(strict_types=1);
 
 namespace PcComponentes\DddPostgreSQL\Repository;
 
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
+use Doctrine\DBAL\Result;
 use Doctrine\DBAL\Statement;
 use PcComponentes\Ddd\Domain\Model\ValueObject\DateTimeValueObject;
 use PcComponentes\Ddd\Domain\Model\ValueObject\Uuid;
@@ -20,7 +23,7 @@ abstract class PostgresBaseAggregateRepository
     final public function __construct(
         Connection $connection,
         AggregateMessageStreamDeserializer $deserializer,
-        string $occurredOnFormat = 'U'
+        string $occurredOnFormat = 'U',
     ) {
         $this->connection = $connection;
         $this->deserializer = $deserializer;
@@ -43,7 +46,7 @@ abstract class PostgresBaseAggregateRepository
 
         $this->bindAggregateMessageValues($message, $stmt);
 
-        $this->execute($stmt);
+        $stmt->executeQuery();
     }
 
     protected function forceInsert(AggregateMessage $message): void
@@ -65,7 +68,7 @@ abstract class PostgresBaseAggregateRepository
 
         $this->bindAggregateMessageValues($message, $stmt);
 
-        $this->execute($stmt);
+        $stmt->executeQuery();
     }
 
     protected function findByAggregateIdSince(Uuid $aggregateId, DateTimeValueObject $since): array
@@ -80,11 +83,11 @@ abstract class PostgresBaseAggregateRepository
         );
         $value = $aggregateId->value();
         $timestamp = $this->mapDatetime($since);
-        $stmt->bindParam(':aggregate_id', $value);
-        $stmt->bindParam(':occurred_on', $timestamp);
-        $this->execute($stmt);
+        $stmt->bindValue('aggregate_id', $value, ParameterType::STRING);
+        $stmt->bindValue('occurred_on', $timestamp, ParameterType::STRING);
+        $result = $stmt->executeQuery();
 
-        $messages = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $messages = $result->fetchAllAssociative();
         $results = [];
 
         foreach ($messages as $message) {
@@ -104,11 +107,11 @@ abstract class PostgresBaseAggregateRepository
                 $this->tableName(),
             ),
         );
-        $stmt->bindValue('aggregate_id', $aggregateId->value(), \PDO::PARAM_STR);
-        $stmt->bindValue('aggregate_version', $aggregateVersion, \PDO::PARAM_INT);
-        $this->execute($stmt);
+        $stmt->bindValue('aggregate_id', $aggregateId->value(), ParameterType::STRING);
+        $stmt->bindValue('aggregate_version', $aggregateVersion, ParameterType::INTEGER);
+        $result = $stmt->executeQuery();
 
-        $messages = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $messages = $result->fetchAllAssociative();
         $results = [];
 
         foreach ($messages as $message) {
@@ -120,9 +123,9 @@ abstract class PostgresBaseAggregateRepository
 
     protected function findByAggregateId(Uuid $aggregateId): array
     {
-        $stmt = $this->queryByAggregateId($aggregateId);
+        $result = $this->queryByAggregateId($aggregateId);
 
-        $events = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $events = $result->fetchAllAssociative();
         $results = [];
 
         foreach ($events as $event) {
@@ -136,9 +139,9 @@ abstract class PostgresBaseAggregateRepository
 
     protected function findByMessageId(Uuid $messageId): ?AggregateMessage
     {
-        $stmt = $this->queryByMessageId($messageId);
+        $result = $this->queryByMessageId($messageId);
 
-        $message = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $message = $result->fetchAssociative();
 
         return $message
             ? $this->deserializer->unserialize($this->convertResultToStream($message))
@@ -147,9 +150,9 @@ abstract class PostgresBaseAggregateRepository
 
     protected function findOneByAggregateId(Uuid $aggregateId): ?AggregateMessage
     {
-        $stmt = $this->queryByAggregateId($aggregateId);
+        $result = $this->queryByAggregateId($aggregateId);
 
-        $message = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $message = $result->fetchAssociative();
 
         return $message
             ? $this->deserializer->unserialize($this->convertResultToStream($message))
@@ -166,10 +169,9 @@ abstract class PostgresBaseAggregateRepository
                 $this->tableName(),
             ),
         );
-        $stmt->bindValue('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
-        $this->execute($stmt);
+        $stmt->bindValue('aggregateId', $aggregateId->value(), ParameterType::STRING);
 
-        $result = $stmt->fetch();
+        $result = $stmt->executeQuery()->fetchAssociative();
 
         return $result['count'];
     }
@@ -183,10 +185,10 @@ abstract class PostgresBaseAggregateRepository
             ->where('aggregate_id = :aggregateId')
             ->andWhere('message_name IN (:eventNames)');
 
-        $stmt->setParameter('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
-        $stmt->setParameter('eventNames', $eventNames, Connection::PARAM_STR_ARRAY);
+        $stmt->setParameter('aggregateId', $aggregateId->value(), ParameterType::STRING);
+        $stmt->setParameter('eventNames', $eventNames, ArrayParameterType::STRING);
 
-        return $stmt->execute()->fetchOne();
+        return $stmt->executeQuery()->fetchOne();
     }
 
     protected function countFilteredEventsByAggregateId(Uuid $aggregateId, string ...$eventNames): int
@@ -198,10 +200,10 @@ abstract class PostgresBaseAggregateRepository
             ->where('aggregate_id = :aggregateId')
             ->andWhere('message_name NOT IN (:eventNames)');
 
-        $stmt->setParameter('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
-        $stmt->setParameter('eventNames', $eventNames, Connection::PARAM_STR_ARRAY);
+        $stmt->setParameter('aggregateId', $aggregateId->value(), ParameterType::STRING);
+        $stmt->setParameter('eventNames', $eventNames, ArrayParameterType::STRING);
 
-        return $stmt->execute()->fetchOne();
+        return $stmt->executeQuery()->fetchOne();
     }
 
     protected function countByAggregateIdSince(Uuid $aggregateId, DateTimeValueObject $since): int
@@ -214,11 +216,10 @@ abstract class PostgresBaseAggregateRepository
                 $this->tableName(),
             ),
         );
-        $stmt->bindValue('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
-        $stmt->bindValue('occurred_on', $this->mapDatetime($since), \PDO::PARAM_STR);
-        $this->execute($stmt);
+        $stmt->bindValue('aggregateId', $aggregateId->value(), ParameterType::STRING);
+        $stmt->bindValue('occurred_on', $this->mapDatetime($since), ParameterType::STRING);
 
-        $result = $stmt->fetch();
+        $result = $stmt->executeQuery()->fetchAssociative();
 
         return $result['count'];
     }
@@ -233,11 +234,10 @@ abstract class PostgresBaseAggregateRepository
                 $this->tableName(),
             ),
         );
-        $stmt->bindValue('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
-        $stmt->bindValue('aggregateVersion', $aggregateVersion, \PDO::PARAM_INT);
-        $this->execute($stmt);
+        $stmt->bindValue('aggregateId', $aggregateId->value(), ParameterType::STRING);
+        $stmt->bindValue('aggregateVersion', $aggregateVersion, ParameterType::INTEGER);
 
-        $result = $stmt->fetch();
+        $result = $stmt->executeQuery()->fetchAssociative();
 
         return $result['count'];
     }
@@ -256,12 +256,12 @@ abstract class PostgresBaseAggregateRepository
             ),
         );
 
-        $stmt->bindValue('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
-        $stmt->bindValue('limit', $limit, \PDO::PARAM_INT);
-        $stmt->bindValue('offset', $offset, \PDO::PARAM_INT);
-        $this->execute($stmt);
+        $stmt->bindValue('aggregateId', $aggregateId->value(), ParameterType::STRING);
+        $stmt->bindValue('limit', $limit, ParameterType::INTEGER);
+        $stmt->bindValue('offset', $offset, ParameterType::INTEGER);
+        $result = $stmt->executeQuery();
 
-        $events = $stmt->fetchAll();
+        $events = $result->fetchAllAssociative();
 
         foreach ($events as $key => $event) {
             $events[$key]['payload'] = \json_decode($event['payload'], true);
@@ -276,21 +276,21 @@ abstract class PostgresBaseAggregateRepository
         int $limit,
         string ...$eventNames
     ): array {
-        $stmt = $this->connection
+        $result = $this->connection
             ->createQueryBuilder()
             ->addSelect('a.message_id, a.aggregate_id, a.aggregate_version, a.occurred_on, a.message_name, a.payload')
             ->from($this->tableName(), 'a')
             ->where('a.aggregate_id = :aggregateId')
             ->andWhere('a.message_name IN (:eventNames)')
-            ->setParameter('aggregateId', $aggregateId->value(), \PDO::PARAM_STR)
-            ->setParameter('eventNames', $eventNames, Connection::PARAM_STR_ARRAY)
+            ->setParameter('aggregateId', $aggregateId->value(), ParameterType::STRING)
+            ->setParameter('eventNames', $eventNames, ArrayParameterType::STRING)
             ->setFirstResult($offset)
             ->setMaxResults($limit)
             ->orderBy('a.occurred_on', 'DESC')
             ->addOrderBy('a.aggregate_version', 'ASC')
-            ->execute();
+            ->executeQuery();
 
-        $events = $stmt->fetchAll();
+        $events = $result->fetchAllAssociative();
 
         foreach ($events as $key => $event) {
             $events[$key]['payload'] = \json_decode($event['payload'], true);
@@ -305,21 +305,21 @@ abstract class PostgresBaseAggregateRepository
         int $limit,
         string ...$eventNames
     ): array {
-        $stmt = $this->connection
+        $result = $this->connection
             ->createQueryBuilder()
             ->addSelect('a.message_id, a.aggregate_id, a.aggregate_version, a.occurred_on, a.message_name, a.payload')
             ->from($this->tableName(), 'a')
             ->where('a.aggregate_id = :aggregateId')
             ->andWhere('a.message_name NOT IN (:eventNames)')
-            ->setParameter('aggregateId', $aggregateId->value(), \PDO::PARAM_STR)
-            ->setParameter('eventNames', $eventNames, Connection::PARAM_STR_ARRAY)
+            ->setParameter('aggregateId', $aggregateId->value(), ParameterType::STRING)
+            ->setParameter('eventNames', $eventNames, ArrayParameterType::STRING)
             ->setFirstResult($offset)
             ->setMaxResults($limit)
             ->orderBy('a.occurred_on', 'DESC')
             ->addOrderBy('a.aggregate_version', 'ASC')
-            ->execute();
+            ->executeQuery();
 
-        $events = $stmt->fetchAll();
+        $events = $result->fetchAllAssociative();
 
         foreach ($events as $key => $event) {
             $events[$key]['payload'] = \json_decode($event['payload'], true);
@@ -328,35 +328,17 @@ abstract class PostgresBaseAggregateRepository
         return $events;
     }
 
-    protected function execute(Statement $stmt): void
-    {
-        $result = $stmt->execute();
-
-        if (false !== $result) {
-            return;
-        }
-
-        $errorInfo = \json_encode($stmt->errorInfo(), \JSON_ERROR_NONE);
-        $errorCode = (string) $stmt->errorCode();
-
-        if (false === \is_string($errorInfo)) {
-            $errorInfo = '';
-        }
-
-        throw new \RuntimeException(\sprintf('%s | %s', $errorInfo, $errorCode));
-    }
-
     private function bindAggregateMessageValues(AggregateMessage $message, Statement $stmt): void
     {
-        $stmt->bindValue('message_id', $message->messageId()->value(), \PDO::PARAM_STR);
-        $stmt->bindValue('aggregate_id', $message->aggregateId()->value(), \PDO::PARAM_STR);
-        $stmt->bindValue('aggregate_version', $message->aggregateVersion(), \PDO::PARAM_INT);
-        $stmt->bindValue('occurred_on', $this->mapDatetime($message->occurredOn()), \PDO::PARAM_STR);
-        $stmt->bindValue('message_name', $message::messageName(), \PDO::PARAM_STR);
+        $stmt->bindValue('message_id', $message->messageId()->value(), ParameterType::STRING);
+        $stmt->bindValue('aggregate_id', $message->aggregateId()->value(), ParameterType::STRING);
+        $stmt->bindValue('aggregate_version', $message->aggregateVersion(), ParameterType::INTEGER);
+        $stmt->bindValue('occurred_on', $this->mapDatetime($message->occurredOn()), ParameterType::STRING);
+        $stmt->bindValue('message_name', $message::messageName(), ParameterType::STRING);
         $stmt->bindValue(
             'payload',
             \json_encode($message->messagePayload(), \JSON_THROW_ON_ERROR, 512),
-            \PDO::PARAM_STR,
+            ParameterType::STRING,
         );
     }
 
@@ -365,14 +347,14 @@ abstract class PostgresBaseAggregateRepository
         return new AggregateMessageStream(
             $event['message_id'],
             $event['aggregate_id'],
-            (float) $event['occurred_on'],
+            (float)$event['occurred_on'],
             $event['message_name'],
-            (int) $event['aggregate_version'],
+            (int)$event['aggregate_version'],
             $event['payload'],
         );
     }
 
-    private function queryByAggregateId(Uuid $aggregateId): Statement
+    private function queryByAggregateId(Uuid $aggregateId): Result
     {
         $stmt = $this->connection->prepare(
             \sprintf(
@@ -383,13 +365,12 @@ abstract class PostgresBaseAggregateRepository
                 $this->tableName(),
             ),
         );
-        $stmt->bindValue('aggregateId', $aggregateId->value(), \PDO::PARAM_STR);
-        $this->execute($stmt);
+        $stmt->bindValue('aggregateId', $aggregateId->value(), ParameterType::STRING);
 
-        return $stmt;
+        return $stmt->executeQuery();
     }
 
-    private function queryByMessageId(Uuid $messageId): Statement
+    private function queryByMessageId(Uuid $messageId): Result
     {
         $stmt = $this->connection->prepare(
             \sprintf(
@@ -399,10 +380,9 @@ abstract class PostgresBaseAggregateRepository
                 $this->tableName(),
             ),
         );
-        $stmt->bindValue('message_id', $messageId->value(), \PDO::PARAM_STR);
-        $this->execute($stmt);
+        $stmt->bindValue('message_id', $messageId->value(), ParameterType::STRING);
 
-        return $stmt;
+        return $stmt->executeQuery();
     }
 
     private function mapDateTime(\DateTimeInterface $occurredOn): string
