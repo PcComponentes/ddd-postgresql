@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace PcComponentes\DddPostgreSQL\Repository;
 
+use Doctrine\DBAL\ParameterType;
 use PcComponentes\Ddd\Domain\Model\DomainEvent;
 use PcComponentes\Ddd\Domain\Model\ValueObject\DateTimeValueObject;
 use PcComponentes\Ddd\Domain\Model\ValueObject\Uuid;
@@ -69,7 +70,7 @@ final class PostgresEventStoreRepository extends PostgresBaseAggregateRepository
 
     public function countGivenEventsByAggregate(Uuid $aggregateId, string ...$events): int
     {
-        return $this->countGivenEventsByAggregateId( $aggregateId, ...$events);
+        return $this->countGivenEventsByAggregateId($aggregateId, ...$events);
     }
 
     public function countEventsFilteredByAggregate(Uuid $aggregateId, string ...$events): int
@@ -97,11 +98,11 @@ final class PostgresEventStoreRepository extends PostgresBaseAggregateRepository
                 $this->tableName(),
             ),
         );
-        $stmt->bindValue('limit', $limit, \PDO::PARAM_INT);
-        $stmt->bindValue('offset', $offset, \PDO::PARAM_INT);
-        $this->execute($stmt);
+        $stmt->bindValue('limit', $limit, ParameterType::INTEGER);
+        $stmt->bindValue('offset', $offset, ParameterType::INTEGER);
+        $result = $stmt->executeQuery();
 
-        return $stmt->fetchAll();
+        return $result->fetchAllAssociative();
     }
 
     protected function tableName(): string
